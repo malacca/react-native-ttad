@@ -1,5 +1,5 @@
 # react-native-ttad
-react native 穿山甲广告
+react native ttad
 
 # 安装
 
@@ -105,6 +105,7 @@ Player = [fullVideo|rewardVideo|interaction](codeId) // 设置广告ID
     .onLoad(player => {}) // 加载成功回调
     .onError(error => {}) // 加载失败回调
     .onCached(player => {}) // 缓存成功回调
+
     .load();  // 开始加载
 
 
@@ -117,6 +118,7 @@ player
     .ritScenes(Int) // 设置场景 0~11
     .scenes(String) // ritScenes=11 时为自定义场景, 手动设置字符串
     .showDownLoadBar(Bool) //是否下载下载条(广告为下载类时生效)
+
     .onError(callback) //发生错误回调
     .onShow(callback) //显示后回调
     .onClick(callback) //点击回调
@@ -131,11 +133,12 @@ player
     .onDownloadFailed(callback) //下载失败
     .onDownloadFinished(callback) //下载完成
     .onInstalled(callback) //安装完成
+
     .show(); //显示
 
 
-// 显示广告的 player 可以使用 load() 的返回, 或 onLoad | onCached 回调参数
-// 或者使用 last*** 获取到的，但以下接口只能在 onLoad | onCached 回调中使用
+// player 可以使用 load() 的返回, 或 onLoad | onCached 回调参数
+// 或者使用 last*** 获取，但以下接口只能在 onLoad | onCached 回调中使用
 
 //0: 全屏视频, 1:激励视频, 2:插屏
 (int) player.type() 
@@ -146,13 +149,13 @@ player
 // 4: 应用下载
 // 5: 拨打电话 
 // -1:未知类型
-(int) player.interaction() 
+(int) type = player.interaction() 
 
 // 广告尺寸, 仅针对插屏
-{width, height} = player.size
+{(int) width, (int) height} = player.size
 
 
-// 最后，对于使用 last*** 系列获取到的 player，可确认是否加载完成
+// 最后，对于使用 last*** 系列获取到的 player，可在确认加载完成后显示
 if (player.canplay()) {
     player.show()
 }
@@ -162,7 +165,7 @@ if (player.canplay()) {
 ## 组件
 
 组件必须要有 width 尺寸，可以是通过 style 指定的，也可以是 flex 布局从父级继承的；
-TTAdSplash / TTAdDraw 除 width 外，还必须要有 height
+TTAdSplash / TTAdDraw 除 width 外，还必须要有 height，也可以是直接指定或从父级继承的
 
 ```jsx
 
@@ -177,8 +180,8 @@ TTAdSplash / TTAdDraw 除 width 外，还必须要有 height
 <TTadBanner
     intervalTime={0}   //轮播间隔时长, 毫秒
     canInterrupt={false} //若广告是视频, 是否可以暂停
-    dislikeNative={false} //点击关闭广告，是否使用原生菜单 (是：菜单在底部, 否：菜单在中间)
-    handleDislike={false} //是否自行处理关闭回调, 默认会删除组件
+    dislikeNative={false} //点击不喜欢，是否弹出原生菜单 (是：菜单在底部, 否：菜单在中间)
+    handleDislike={false} //是否自行处理不喜欢回调, 默认会移除组件
 />
 
 // feed 信息流
@@ -195,7 +198,7 @@ TTAdSplash / TTAdDraw 除 width 外，还必须要有 height
 
 // 启动屏
 <TTAdSplash
-    timeout={3000} //超时时长
+    timeout={3000} //加载超时的时长(毫秒)
 />
 
 // draw 信息流
@@ -206,7 +209,7 @@ TTAdSplash / TTAdDraw 除 width 外，还必须要有 height
 
 组件的 listeners 需要指定为一个函数，可监听广告的各种回调
 
-具体可参见： [Helper.js](blob/master/src/Helper.js)
+具体可参见： [Helper.js](src/Helper.js)
 
 ```
 listeners = {bus => {
@@ -220,7 +223,7 @@ listeners = {bus => {
 
 # 预加载
 
-对于 TTadFeed / TTAdDraw 组件，可进行预加载
+对于 TTadFeed / TTAdDraw 组件，一般用于列表，可进行预加载
 
 ```
 [loadFeed|loadDraw](codeId, count)  //广告ID, 预加载条数
@@ -234,14 +237,15 @@ listeners = {bus => {
 
         // 获取 uuids 为数组  ["xxx", "yyyy"]
 
-    }).load()
+    })
+    .load()
 ```
 
-通过预加载 uuid 载入组件
+通过预加载得到的 uuid 载入组件
 
 
 ``` js
-// 与正常组件相同, 但 将 codeId 替换为 uuid
+// 与正常组件相同, 只需将 codeId 替换为 uuid
 
 <TTadFeed || TTAdDraw
     uuid=""  //设置为 预加载得到的 uuid
