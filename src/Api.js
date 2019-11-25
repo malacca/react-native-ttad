@@ -32,7 +32,7 @@ class Player {
     _onReward = null; // 激励视频结果
 
     // app 下载器监听
-    _showDownLoadBar = false; //是否下载下载进度条
+    _showDownLoadBar = false; //是否显示进度条
     _onIdle = null; // 下载空闲
     _onDownloadProgress = null; //下载进度
     _onDownloadPaused = null; //下载暂停
@@ -69,7 +69,7 @@ class Player {
         return this._size;
     }
 
-    //以下是未在 show() 之前进行设定
+    //以下是在 show() 之前进行设定
     onShow(callback) {
         this._onShow = callback;
         return this

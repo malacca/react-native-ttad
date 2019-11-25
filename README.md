@@ -162,6 +162,10 @@ if (player.canplay()) {
 
 ```
 
+备注：关于场景值，可参见 [mttRitScenes](android/src/main/java/com/malacca/ttad/TTadModule.java#L45)
+
+
+
 ## 组件
 
 组件必须要有 width 尺寸，可以是通过 style 指定的，也可以是 flex 布局从父级继承的；
