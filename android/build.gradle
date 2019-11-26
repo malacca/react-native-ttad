@@ -27,11 +27,12 @@ android {
 
 dependencies {
     implementation 'com.facebook.react:react-native:+'
+    implementation fileTree(dir: "libs", include: ["open_ad_sdk.aar"])
 
-    // 若主工程已集成, 可在 gradle.properties 中指明, 可避免多 lib 依赖冲突
+    // 若以下依赖冲突, 可自行在 app 项目中导入以下依赖
+    // 并在 gradle.properties 添加 TTAD_READY=true 提过这里的集成
+    // 默认情况, 为减少配置, 是直接导入的
     if (safeCfgGet("TTAD_READY", "false") != "true") {
-
-        implementation fileTree(dir: "libs", include: ["*.aar"])
         implementation 'com.android.support:support-v4:28.0.0'
 
         // 1.2.18 版本以下有漏洞: https://www.cnvd.org.cn/webinfo/show/5257
@@ -43,5 +44,4 @@ dependencies {
             implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.15'
         }
     }
-
 }
