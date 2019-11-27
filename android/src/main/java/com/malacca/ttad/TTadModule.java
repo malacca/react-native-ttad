@@ -69,6 +69,8 @@ public class TTadModule extends ReactContextBaseJavaModule implements LifecycleE
     private HashMap<String, ReadableMap> mttInteractionConfigs = new HashMap<>();
     private HashMap<String,TTNativeExpressAd> mttInteractionAds = new HashMap<>();
 
+    private DeviceEventManagerModule.RCTDeviceEventEmitter mJSModule = null;
+
     // 请求广告的接口类
     public static @Nullable TTAdManager get() {
         return sdkInit ? TTAdSdk.getAdManager() : null;
@@ -810,7 +812,9 @@ public class TTadModule extends ReactContextBaseJavaModule implements LifecycleE
     }
 
     private void sendEvent(WritableMap params) {
-        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                .emit("TTadEvent", params);
+        if (mJSModule == null) {
+            mJSModule = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
+        }
+        mJSModule.emit("TTadEvent", params);
     }
 }
