@@ -30,6 +30,11 @@ react native ttad
 </manifest>
 ```
 
+## 2.依赖冲突
+
+若编译发送依赖版本冲突，请参阅 [build.gradle](android/build.gradle#L32)
+
+
 # iOS 配置
 
 还未开发 iOS 版本，TODO
