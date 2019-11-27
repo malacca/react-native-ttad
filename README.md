@@ -15,6 +15,9 @@ react native ttad
 
     <!--必须要有的权限-->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!--可选权限-->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -22,9 +25,8 @@ react native ttad
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission android:name="android.permission.GET_TASKS"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!--最好能提供的权限-->
+    <!--最好能提供的权限, 提示广告投放精准度-->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
 </manifest>
