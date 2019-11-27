@@ -32,7 +32,7 @@ react native ttad
 
 ## 2.依赖冲突
 
-若编译发送依赖版本冲突，请参阅 [build.gradle](android/build.gradle#L32)
+若编译过程，相关依赖版本冲突，请参阅 [build.gradle](android/build.gradle#L32)
 
 
 # iOS 配置
