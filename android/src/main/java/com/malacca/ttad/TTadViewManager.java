@@ -35,8 +35,7 @@ public abstract class TTadViewManager extends SimpleViewManager<TTadView> {
     }
 
     @Override
-    public @Nullable
-    Map<String, Object> getExportedCustomDirectEventTypeConstants() {
+    public @Nullable Map<String, Object> getExportedCustomDirectEventTypeConstants() {
         return MapBuilder.<String, Object>builder()
                 .put(EVENT_NAME, MapBuilder.of("registrationName", EVENT_NAME))
                 .build();
