@@ -45,6 +45,7 @@ class TTAdDraw extends PureComponent {
       isInteraction:false, 
     });
   }
+
   _fadeInOut = (out) => {
     this._cardFadeIn.stop();
     this._cardFadeOut.stop();
@@ -54,10 +55,12 @@ class TTAdDraw extends PureComponent {
       this._cardFadeIn.start();
     }
   }
+
   _emit = (bus, event, message) => {
     const key = '_' + event;
     bus && bus[key] && bus[key](message);
   }
+
   _event = (e) => {
     let {event, code, error, logo, ...message} = e.nativeEvent;
     if (event === 'onLoad') {
@@ -76,7 +79,7 @@ class TTAdDraw extends PureComponent {
       return this._emit(this._bus, event, message);
     }
 
-    //处理默认 card
+    // 处理默认 card
     if (event === 'onLoad') {
       const {logo, title, description, buttonText, icon} = message;
       this.setState({logo, title, description, buttonText, icon}) 
@@ -87,6 +90,7 @@ class TTAdDraw extends PureComponent {
     }
     this._emit(this._bus, event, message);
   }
+
   _renderCard() {
     if (this.state.title === null) {
       return null;
@@ -108,7 +112,9 @@ class TTAdDraw extends PureComponent {
         <Text style={styles.description}>{logo} {this.state.description}</Text>
     </Animated.View>
   }
+
   _renderDraw(nativeProps){
+    // logo 仅请求一次, 缓存起来
     const {needAdLogo, ...props} = nativeProps;
     if (!_TTadLogoBase64) {
       props.needAdLogo = true;
@@ -121,6 +127,7 @@ class TTAdDraw extends PureComponent {
       />
     );
   }
+
   render(){
     const {disableCard} = this.props;
     const {bus, props} = makeProps(this.props, 'draw')
@@ -131,6 +138,8 @@ class TTAdDraw extends PureComponent {
     this._createAnimation();
     return <View style={styles.draw}>{this._renderDraw(props)}{this._renderCard()}</View>
   }
+
+  // 调用时, 可使用 ref.open() 触发点击事件
   open = () => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(this.refs.ad),
