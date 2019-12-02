@@ -8,6 +8,7 @@ import androidx.annotation.Nullable;
 import com.facebook.react.common.MapBuilder;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.uimanager.SimpleViewManager;
+import com.facebook.react.uimanager.ReactStylesDiffMap;
 import com.facebook.react.uimanager.annotations.ReactProp;
 
 public abstract class TTadViewManager extends SimpleViewManager<TTadView> {
@@ -19,13 +20,22 @@ public abstract class TTadViewManager extends SimpleViewManager<TTadView> {
         view.destroyAdView();
     }
 
+    @Override
+    public void updateProperties(@NonNull TTadView view, ReactStylesDiffMap props) {
+        super.updateProperties(view, props);
+        view.updateAd(
+                props.hasKey("codeId") || props.hasKey("uuid") || props.hasKey("deepLink"),
+                props.hasKey("width") || props.hasKey("height")
+        );
+    }
+
     @ReactProp(name = "codeId")
     public void setCodeId(TTadView view, String codeId) {
         view.setCodeId(codeId);
     }
 
     @ReactProp(name = "deepLink")
-    public void setDeepLink(TTadView view, Boolean deepLink) {
+    public void setDeepLink(TTadView view, boolean deepLink) {
         view.setDeepLink(deepLink);
     }
 

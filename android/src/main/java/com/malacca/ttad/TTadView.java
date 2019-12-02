@@ -3,6 +3,7 @@ package com.malacca.ttad;
 import java.util.List;
 import java.io.ByteArrayOutputStream;
 
+import android.os.Build;
 import android.view.View;
 import android.util.Base64;
 import android.text.TextUtils;
@@ -34,10 +35,12 @@ import com.bytedance.sdk.openadsdk.TTNativeExpressAd;
 import com.bytedance.sdk.openadsdk.TTAppDownloadListener;
 
 public class TTadView extends FrameLayout implements LifecycleEventListener {
+    private final static int API_LEVEL = Build.VERSION.SDK_INT;
+
     private TTadType adType;
     private String uuid = null;
     private String codeId = null;
-    private Boolean deepLink = null;
+    private boolean deepLink = false;
     private int timeout = 0;
     private int intervalTime = 0;
     private boolean dislikeNative = false;
@@ -49,7 +52,10 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
     private int adWidth = 0;
     private int adHeight = 0;
     private int adStatus = 0;
+
+    private boolean adLoaded;
     private boolean jsUpdate;
+    private boolean adReRender;
     private View drawClickView;
     private TTDrawFeedAd drawView;
     private TTSplashAd splashView;
@@ -71,8 +77,9 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
     }
 
     /**
-     * 插入 addView 不显示, 直接 measure & layout 广告的 view 也行, 但对于 banner 这样可以轮播的
-     * 轮播切换时, 又不显示了, 没有深入了解 android, 眼下这个方案有效, 不晓得是否有其他方案
+     * 插插入 addView 后需要重绘才能显示, 实测在插入 adView 后调用 `post(measureAndLayout)` 重绘也有效
+     * 但对于 banner 这种可能是轮播切换的, 切换后, 又不显示了, 不晓得还有没有其他类似情况
+     * 以防万一, 干脆每次 requestLayout 都重置一下, 没有深入了解 android, 眼下这个方案有效, 或许可优化
      * https://github.com/facebook/react-native/issues/17968
      * https://github.com/facebook/react-native/issues/11829
      * https://www.jianshu.com/p/a6c5042c5ce8
@@ -80,71 +87,89 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
     @Override
     public void requestLayout() {
         super.requestLayout();
-        post(measureAndLayout);
+        if (adLoaded) {
+            post(measureAndLayout);
+        }
     }
 
-    private final Runnable measureAndLayout = getReLayout(this, false);
+    private final Runnable measureAndLayout = new Runnable() {
+        @Override
+        public void run() {
+            measure(
+                    MeasureSpec.makeMeasureSpec(getWidth(), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(getHeight(), MeasureSpec.EXACTLY)
+            );
+            layout(getLeft(), getTop(), getRight(), getBottom());
+        }
+    };
 
-    private Runnable getReLayout(final View view, final boolean drawView) {
-        return new Runnable() {
-            @Override
-            public void run() {
-                view.measure(
-                        MeasureSpec.makeMeasureSpec(view.getWidth(), MeasureSpec.EXACTLY),
-                        MeasureSpec.makeMeasureSpec(view.getHeight(), MeasureSpec.EXACTLY)
-                );
-                view.layout(view.getLeft(), view.getTop(), view.getRight(), view.getBottom());
-                if (drawView) {
-                    requestLayout();
-                }
+    // props 发生变动, 更新广告
+    protected void updateAd(boolean reloadAd, boolean reloadSize) {
+        // 是 jsUpdate 设置 size 的, 不处理
+        if (jsUpdate) {
+            jsUpdate = false;
+            reloadSize = false;
+        }
+        if (reloadAd) {
+            if (reloadSize) {
+                // 重置了 ad 属性, 且 size 有变动, 这里不处理,
+                // 仅重置状态值, 交给后续会触发的 onLayout 去处理
+                adLoaded = false;
+            } else {
+                requestAd();
             }
-        };
+        } else if (reloadSize && adType != TTadType.SPLASH && adType != TTadType.DRAW) {
+            // 仅 size 变动, express 类型需重新请求, ad size 不会自适应变动
+            // 同样的, 这里仅重置状态值
+            adLoaded = false;
+        }
     }
 
-    /**
-     * 当尺寸发生变化时, 重新请求
-     * 这里比较蛋疼, 本想是尺寸变化时, 动态拉伸广告尺寸, 但广告 sdk 没提供相关接口, 也没找到其他方案
-     * 考虑到载入广告后 还修改尺寸这种骚操作 比较少, 所以修改尺寸后 直接重新请求加载新广告
-     */
+    // layout -> 有尺寸了 && 未Loaded -> 加载
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
-        int width = getWidth();
-        int height = getHeight();
+        int width = adLoaded ? 0 : getWidth();
+        int height = adLoaded ? 0 : getHeight();
         if (width == 0 || (width == adWidth && height == adHeight)) {
             return;
         }
-        adWidth = getWidth();
-        adHeight = getHeight();
-        if (!jsUpdate) {
-            tryLoadAdView();
-        } else if (adHeight != 0) {
-            jsUpdate = false;
+        adWidth = width;
+        adHeight = height;
+        requestAd();
+    }
+
+    // android 4.4 (API Level <= 19) 在和 react-navigation tabs 一起使用时, 放在 tab 页面中
+    // 切走之后再切回来, 显示为空白, 这里针对这个情况, 让 adView 重新 render() 一下
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (API_LEVEL < 21 && !adReRender && adView != null) {
+            adReRender = true;
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (adReRender) {
+            adView.render();
         }
     }
 
     // 使用预加载的 uuid
     protected void setUUID(String uuid) {
-        if (!uuid.equals(this.uuid)) {
-            this.uuid = uuid;
-            tryLoadAdView(true);
-        }
+        this.uuid = uuid;
     }
 
     // 设置广告id
     protected void setCodeId(String codeId) {
-        if (!codeId.equals(this.codeId)) {
-            this.codeId = codeId;
-            tryLoadAdView();
-        }
+        this.codeId = codeId;
     }
 
     // 是否支持 deepLink
-    protected void setDeepLink(Boolean deepLink) {
-        if (deepLink != this.deepLink) {
-            this.deepLink = deepLink;
-            tryLoadAdView();
-        }
+    protected void setDeepLink(boolean deepLink) {
+        this.deepLink = deepLink;
     }
 
     // 设置开屏广告倒计时时长
@@ -190,34 +215,20 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
     }
 
     // 请求广告
-    private void tryLoadAdView() {
-        tryLoadAdView(false);
-    }
-
-    private void tryLoadAdView(boolean uuidChanged) {
+    private void requestAd() {
         // 必须有宽度才继续进行
         if (adWidth == 0) {
             return;
         }
+        adLoaded = true;
 
         // 使用 uuid 预加载的广告, 只有在 uuid 发生变化才重新加载, 其他情况(如尺寸/其他props)的变动直接忽略
-        if (uuid != null) {
-            if (
-                    uuidChanged ||
-                    (adType == TTadType.DRAW && drawView == null) ||
-                    (adType == TTadType.FEED && adView == null)
-            ) {
-                if (adType == TTadType.DRAW) {
-                    renderDrawCache(uuid);
-                } else {
-                    renderExpressCache(uuid);
-                }
+        if (!TextUtils.isEmpty(uuid)) {
+            if (adType == TTadType.DRAW) {
+                renderDrawCache(uuid);
+            } else {
+                renderExpressCache(uuid);
             }
-            return;
-        }
-
-        // 等相关 props 条件就绪, 再请求
-        if (deepLink == null) {
             return;
         }
 
@@ -345,14 +356,7 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
             }
         });
         bindAdViewListener();
-
-        final View adView = ad.getAdView();
-        addView(adView, 0);
-
-        // 这里让人无法理解, 从预加载读取的, 还需要调用一下让其 re-layout 才能显示
-        if (preload) {
-            adView.post(getReLayout(adView, true));
-        }
+        addView(ad.getAdView(), 0);
     }
 
     // 通知 js draw 广告就绪
@@ -460,7 +464,11 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
         ad.setExpressInteractionListener(new TTNativeExpressAd.ExpressAdInteractionListener() {
             @Override
             public void onAdShow(View view, int type) {
-                sendAdEvent("onShow", type, null);
+                if (adReRender) {
+                    adReRender = false;
+                } else {
+                    sendAdEvent("onShow", type, null);
+                }
             }
 
             @Override
@@ -472,6 +480,7 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
             public void onRenderFail(View view, String msg, int code) {
                 sendAdEvent("onFail", code, msg);
             }
+
             @Override
             public void onRenderSuccess(View view, float width, float height) {
                 insertAdView(view, width, height);
@@ -490,6 +499,7 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
     private void insertAdView(final View view, float width, float height) {
         removeAllViews();
         addView(view);
+
         // 通知 js
         jsUpdate = adHeight == 0;
         WritableMap map = Arguments.createMap();
@@ -514,6 +524,7 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
                 public void onSelected(int i, String s) {
                     sendAdDislikeEvent(s);
                 }
+
                 @Override
                 public void onCancel() {
                 }
@@ -739,6 +750,7 @@ public class TTadView extends FrameLayout implements LifecycleEventListener {
     private void onClickAd() {
         onClickAd("onClick");
     }
+
     private void onClickAd(String event) {
         adStatus = 1;
         sendAdEvent(event);

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import android.os.Bundle;
+import android.view.Window;
 import android.graphics.Color;
 import android.widget.TextView;
 import android.content.Context;
@@ -29,6 +30,7 @@ public class TTadDislikeDialog extends TTDislikeDialogAbstract {
 
     public TTadDislikeDialog(@NonNull Context context, List<FilterWord> list) {
         super(context);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         mList = initData(list);
     }
 
