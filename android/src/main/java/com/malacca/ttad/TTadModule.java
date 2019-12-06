@@ -132,7 +132,7 @@ public class TTadModule extends ReactContextBaseJavaModule implements LifecycleE
         boolean showNotify = !config.hasKey("showNotify") || config.getBoolean("showNotify");
         boolean download4g = config.hasKey("download4g") && config.getBoolean("download4g");
         boolean lightBar = config.hasKey("lightBar") && config.getBoolean("lightBar");
-        boolean debug = config.hasKey("debug") && config.getBoolean("debug");
+        boolean debug = config.hasKey("debug") && config.getBoolean("debug") || BuildConfig.DEBUG;
 
         final TTAdConfig.Builder builder = new TTAdConfig.Builder()
                 .appId(appId)

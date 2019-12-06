@@ -86,7 +86,7 @@ initSdk({
     showNotify:Bool, //是否允许sdk显示通知栏, 默认 true
     download4g:Bool, //在4g网络下是否可直接下载app, 默认 false
     lightBar:Bool, //打开广告网页是否使用浅色标题栏, 默认 false
-    debug:Bool,   //是否输出日志 (是 android 日志,不是js), 默认 false
+    debug:Bool,   //是否输出日志 (是 android 日志,不是js), debug模式默认为true, 反之false
 })
 ```
 
