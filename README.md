@@ -64,11 +64,11 @@ import {
     TTAdInteraction, 
     TTAdSplash, 
     TTAdDraw
-} from 'react-native-uapp'
+} from 'react-native-ttad'
 
 
 // 也可以
-import ttad, {TTadBanner} from 'react-native-uapp'
+import ttad, {TTadBanner} from 'react-native-ttad'
 
 // 调用api
 ttad.initSdk();
