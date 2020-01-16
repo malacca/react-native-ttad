@@ -11,8 +11,8 @@ import com.facebook.react.uimanager.SimpleViewManager;
 import com.facebook.react.uimanager.ReactStylesDiffMap;
 import com.facebook.react.uimanager.annotations.ReactProp;
 
-public abstract class TTadViewManager extends SimpleViewManager<TTadView> {
-    public static final String EVENT_NAME = "onTTadViewEvent";
+abstract class TTadViewManager extends SimpleViewManager<TTadView> {
+    static final String EVENT_NAME = "onTTadViewEvent";
 
     @Override
     public void onDropViewInstance(@NonNull TTadView view) {

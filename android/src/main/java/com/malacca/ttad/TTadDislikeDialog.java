@@ -24,11 +24,11 @@ import com.bytedance.sdk.openadsdk.dislike.TTDislikeListView;
  * 自定义 dislike dialog 来源于 sdk demo 包
  * 自带的那个弹出 ui 细节有点差, 所以默认的 dislike 弹窗改用这个
  */
-public class TTadDislikeDialog extends TTDislikeDialogAbstract {
+class TTadDislikeDialog extends TTDislikeDialogAbstract {
     private final List<FilterWord> mList;
     private OnDislikeItemClick mOnDislikeItemClick;
 
-    public TTadDislikeDialog(@NonNull Context context, List<FilterWord> list) {
+    TTadDislikeDialog(@NonNull Context context, List<FilterWord> list) {
         super(context);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         mList = initData(list);
@@ -49,7 +49,7 @@ public class TTadDislikeDialog extends TTDislikeDialogAbstract {
         return data;
     }
 
-    public void setOnDislikeItemClick(OnDislikeItemClick onDislikeItemClick) {
+    void setOnDislikeItemClick(OnDislikeItemClick onDislikeItemClick) {
         mOnDislikeItemClick = onDislikeItemClick;
     }
 

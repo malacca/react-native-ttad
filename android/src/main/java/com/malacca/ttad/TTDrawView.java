@@ -7,7 +7,7 @@ import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
 
-public class TTDrawView extends TTadViewManager {
+class TTDrawView extends TTadViewManager {
 
     @Override
     public @NonNull String getName() {

@@ -39,7 +39,7 @@ import com.bytedance.sdk.openadsdk.TTAppDownloadListener;
  * 处理 ttad sdk 的初始化
  * 桥接 全屏视频/激励视频/插屏广告/Feed信息流预加载/draw视频流预加载 接口
  */
-public class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
+class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
     private static boolean sdkInit = false;
     private static final String REACT_CLASS = "TTadModule";
     private static TTAdConstant.RitScenes[] mttRitScenes = {
@@ -72,12 +72,12 @@ public class TTadModule extends ReactContextBaseJavaModule implements LifecycleE
     private DeviceEventManagerModule.RCTDeviceEventEmitter mJSModule = null;
 
     // 请求广告的接口类
-    public static @Nullable TTAdManager get() {
+    static @Nullable TTAdManager get() {
         return sdkInit ? TTAdSdk.getAdManager() : null;
     }
 
     // 获取预加载的 feed 类型广告, 只能取一次, 取完后就会从缓存中移除
-    public static TTNativeExpressAd getFeedPreAd(String uuid) {
+    static TTNativeExpressAd getFeedPreAd(String uuid) {
         if (feedAds.containsKey(uuid)) {
             TTNativeExpressAd ad = feedAds.get(uuid);
             feedAds.remove(uuid);
@@ -87,7 +87,7 @@ public class TTadModule extends ReactContextBaseJavaModule implements LifecycleE
     }
 
     // 获取预加载的 draw 类型广告, 只能取一次, 取完后就会从缓存中移除
-    public static TTDrawFeedAd getDrawPreAd(String uuid) {
+    static TTDrawFeedAd getDrawPreAd(String uuid) {
         if (drawAds.containsKey(uuid)) {
             TTDrawFeedAd ad = drawAds.get(uuid);
             drawAds.remove(uuid);
@@ -99,7 +99,7 @@ public class TTadModule extends ReactContextBaseJavaModule implements LifecycleE
     /**
      * 模块类 开始
      */
-    public TTadModule(ReactApplicationContext context) {
+    TTadModule(ReactApplicationContext context) {
         super(context);
         reactContext = context;
         reactContext.addLifecycleEventListener(this);

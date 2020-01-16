@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
 
-public class TTInteractionView extends TTadViewManager {
+class TTInteractionView extends TTadViewManager {
 
     @Override
     public @NonNull String getName() {

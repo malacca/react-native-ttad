@@ -129,8 +129,15 @@ class TTAdDraw extends PureComponent {
   }
 
   render(){
-    const {disableCard} = this.props;
-    const {bus, props} = makeProps(this.props, 'draw')
+    const {listener, ...nativeProps} = this.props;
+    const {disableCard} = nativeProps;
+    if (listener) {
+      nativeProps.listener = listener;
+    } else if (!disableCard) {
+      // 使用默认 card, 必须有 listener
+      nativeProps.listener = () => {};
+    }
+    const {bus, props} = makeProps(nativeProps, 'draw')
     this._bus = bus;
     if (disableCard) {
       return this._renderDraw(props);

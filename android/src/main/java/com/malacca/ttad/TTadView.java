@@ -34,7 +34,7 @@ import com.bytedance.sdk.openadsdk.TTDrawFeedAd;
 import com.bytedance.sdk.openadsdk.TTNativeExpressAd;
 import com.bytedance.sdk.openadsdk.TTAppDownloadListener;
 
-public class TTadView extends FrameLayout implements LifecycleEventListener {
+class TTadView extends FrameLayout implements LifecycleEventListener {
     private final static int API_LEVEL = Build.VERSION.SDK_INT;
 
     private TTadType adType;

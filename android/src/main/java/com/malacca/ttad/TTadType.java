@@ -1,6 +1,6 @@
 package com.malacca.ttad;
 
-public enum TTadType {
+enum TTadType {
     FEED,
     DRAW,
     FULL,
