@@ -33,4 +33,10 @@ class TTBannerView extends TTadViewManager {
     public void setDislikeNative(TTadView view, boolean dislikeNative) {
         view.setDislikeNative(dislikeNative);
     }
+
+    // 禁用 dislike
+    @ReactProp(name = "dislikeDisable")
+    public void setDislikeDisable(TTadView view, boolean dislikeDisable) {
+        view.setDislikeDisable(dislikeDisable);
+    }
 }

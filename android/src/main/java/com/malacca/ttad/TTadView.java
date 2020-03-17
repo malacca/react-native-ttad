@@ -44,6 +44,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
     private int timeout = 0;
     private int intervalTime = 0;
     private boolean dislikeNative = false;
+    private boolean dislikeDisable = false;
     private boolean drawAdNeedLogo = false;
     private boolean canInterruptVideo = false;
     private ReadableMap listeners = null;
@@ -206,6 +207,14 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
     protected void setDislikeNative(boolean dislikeNative) {
         this.dislikeNative = dislikeNative;
         bindDislikeListener();
+    }
+
+    // 启用 dislike, 一旦启用就不可再禁用了
+    protected void setDislikeDisable(boolean dislikeDisable) {
+        this.dislikeDisable = dislikeDisable;
+        if (!dislikeDisable) {
+            bindDislikeListener();
+        }
     }
 
     // 设置监听事件
@@ -514,7 +523,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
 
     // 绑定不喜欢监听
     private void bindDislikeListener() {
-        if (adView == null || (adType != TTadType.FEED && adType != TTadType.BANNER)) {
+        if (adView == null || (adType != TTadType.FEED && adType != TTadType.BANNER) || dislikeDisable) {
             return;
         }
         // 使用默认的

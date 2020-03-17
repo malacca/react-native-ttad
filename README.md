@@ -192,6 +192,7 @@ TTAdSplash / TTAdDraw 除 width 外，还必须要有 height，也可以是直�
 <TTadBanner
     intervalTime={0}   //轮播间隔时长, 毫秒
     canInterrupt={false} //若广告是视频, 是否可以暂停
+    dislikeDisable={false} //禁用不喜欢, 还是会显示关闭那个x, 点了没效果
     dislikeNative={false} //点击不喜欢，是否弹出原生菜单 (是：菜单在底部, 否：菜单在中间)
     handleDislike={false} //是否自行处理不喜欢回调, 默认处理方式为移除组件
 />
@@ -199,6 +200,7 @@ TTAdSplash / TTAdDraw 除 width 外，还必须要有 height，也可以是直�
 // feed 信息流
 <TTadFeed
     canInterrupt={false} 
+    dislikeDisable={false}
     dislikeNative={false} 
     handleDislike={false}
 />
