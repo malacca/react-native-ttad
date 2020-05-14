@@ -29,10 +29,40 @@ react native ttad
     <!--最好能提供的权限, 提升广告投放精准度-->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+
+    <application>
+
+        <!--添加本段, Android 7.0 以上需要-->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.TTFileProvider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+
+    </application>
 </manifest>
 ```
 
-## 2.依赖冲突
+## 2.新建 `android/app/src/main/res/xml/file_paths.xml`
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <external-path name="tt_external_root" path="." />
+    <external-path name="tt_external_download" path="Download" />
+    <external-files-path name="tt_external_files_download" path="Download" />
+    <files-path name="tt_internal_file_download" path="Download" />
+    <cache-path name="tt_internal_cache_download" path="Download" />
+</paths>
+```
+
+
+## 3.依赖冲突
 
 若编译过程，相关依赖版本冲突，请参阅 [build.gradle](android/build.gradle#L32)
 
