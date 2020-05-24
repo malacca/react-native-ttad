@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.HashMap;
 
+import android.util.Log;
 import android.view.View;
 import android.app.Activity;
 import android.text.TextUtils;
@@ -56,15 +57,18 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         TTAdConstant.RitScenes.GAME_GIFT_BONUS,
         TTAdConstant.RitScenes.CUSTOMIZE_SCENES,
     };
-    private static HashMap<String, TTDrawFeedAd> drawAds = new HashMap<>();
-    private static HashMap<String, TTNativeExpressAd> feedAds = new HashMap<>();
 
+    private static HashMap<String, TTNativeExpressAd> feedAds = new HashMap<>();
+    private static HashMap<String, TTNativeExpressAd> drawAds = new HashMap<>();
+    private static HashMap<String, TTDrawFeedAd> nativeDrawAds = new HashMap<>();
 
     private ReactApplicationContext reactContext;
     private HashMap<String,TTRewardVideoAd> mttRewardVideoAds = new HashMap<>();
     private HashMap<String,TTFullScreenVideoAd> mttFullVideoAds = new HashMap<>();
 
+    private String lastClickInteraction = null;
     private String lastActiveInteraction = null;
+    private boolean lastInteractionDismiss = true;
     private HashMap<String, String[]> mttInteractionErrs = new HashMap<>();
     private HashMap<String, ReadableMap> mttInteractionConfigs = new HashMap<>();
     private HashMap<String,TTNativeExpressAd> mttInteractionAds = new HashMap<>();
@@ -87,10 +91,20 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
     }
 
     // 获取预加载的 draw 类型广告, 只能取一次, 取完后就会从缓存中移除
-    static TTDrawFeedAd getDrawPreAd(String uuid) {
+    static TTNativeExpressAd getDrawPreAd(String uuid) {
         if (drawAds.containsKey(uuid)) {
-            TTDrawFeedAd ad = drawAds.get(uuid);
+            TTNativeExpressAd ad = drawAds.get(uuid);
             drawAds.remove(uuid);
+            return ad;
+        }
+        return null;
+    }
+
+    // 获取预加载的 native draw 类型广告, 只能取一次, 取完后就会从缓存中移除
+    static TTDrawFeedAd getNativeDrawPreAd(String uuid) {
+        if (nativeDrawAds.containsKey(uuid)) {
+            TTDrawFeedAd ad = nativeDrawAds.get(uuid);
+            nativeDrawAds.remove(uuid);
             return ad;
         }
         return null;
@@ -426,6 +440,7 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         if (downloadListener != null) {
             ad.setDownloadListener(downloadListener);
         }
+        // 缓存插屏配置
         mttInteractionConfigs.put(hash, config);
         mainActivity.runOnUiThread(new Runnable() {
             @Override
@@ -495,15 +510,28 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
             switch (type) {
                 case FEED:
                     builder.setExpressViewAcceptedSize(width, height);
-                    loadTTadFeed(mTTAdNative, builder, hash);
+                    loadTTadFeed(mTTAdNative, builder, hash, false);
                     break;
                 case DRAW:
-                    loadTTadDraw(mTTAdNative, builder, hash);
+                    // 预加载 自渲染模式 的 draw ad, 该类型默认已不可申请, 但之前做了, 就先保留着
+                    if (config.hasKey("native") && config.getBoolean("native")) {
+                        loadTTadNativeDraw(mTTAdNative, builder, hash);
+                    } else {
+                        loadTTadFeed(mTTAdNative, builder, hash, true);
+                    }
                     break;
                 case FULL:
+                    // 当前只有模板渲染了, 所以默认设置为模板渲染, 但指定为 native 仍可使用自渲染
+                    if (!config.hasKey("native") || !config.getBoolean("native")) {
+                        builder.setExpressViewAcceptedSize(500,500);
+                    }
                     loadTTadFull(mTTAdNative, builder, hash);
                     break;
                 case REWARD:
+                    // 同上
+                    if (!config.hasKey("native") || !config.getBoolean("native")) {
+                        builder.setExpressViewAcceptedSize(500,500);
+                    }
                     loadTTadReward(mTTAdNative, builder, hash, config);
                     break;
                 case INTERACTION:
@@ -522,9 +550,9 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         }
     }
 
-    // 加载信息流 feed 视频
-    private void loadTTadFeed(TTAdNative mTTAdNative, AdSlot.Builder builder, final String hash) {
-        mTTAdNative.loadNativeExpressAd(builder.build(), new TTAdNative.NativeExpressAdListener() {
+    // 预加载 feed draw 信息流广告
+    private void loadTTadFeed(TTAdNative mTTAdNative, AdSlot.Builder builder, final String hash, final boolean isDraw) {
+        TTAdNative.NativeExpressAdListener listener = new TTAdNative.NativeExpressAdListener() {
             @Override
             public void onError(int code, String message) {
                 sendAdEvent(hash, "onVideoError", code, message);
@@ -536,7 +564,11 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
                 WritableArray uuids = Arguments.createArray();
                 for (TTNativeExpressAd ad : ads) {
                     uuid = UUID.randomUUID().toString();
-                    feedAds.put(uuid, ad);
+                    if (isDraw) {
+                        drawAds.put(uuid, ad);
+                    } else {
+                        feedAds.put(uuid, ad);
+                    }
                     uuids.pushString(uuid);
                 }
                 WritableMap params = Arguments.createMap();
@@ -545,12 +577,16 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
                 params.putArray("uuids", uuids);
                 sendEvent(params);
             }
-        });
+        };
+        if (isDraw) {
+            mTTAdNative.loadExpressDrawFeedAd(builder.build(), listener);
+        } else {
+            mTTAdNative.loadNativeExpressAd(builder.build(), listener);
+        }
     }
 
-    // 加载信息流 draw 视频, sdk 有通过 ExpressAd 加载的 api, 但实测加载不到东西
-    // 但官方下载的 demo 中又可以, 估计是联盟服务端剔除了这种方式, 老用户还可用, 新注册的就不行了
-    private void loadTTadDraw(TTAdNative mTTAdNative, AdSlot.Builder builder, final String hash) {
+    // 预加载 native draw video
+    private void loadTTadNativeDraw(TTAdNative mTTAdNative, AdSlot.Builder builder, final String hash) {
         mTTAdNative.loadDrawFeedAd(builder.build(), new TTAdNative.DrawFeedAdListener() {
             @Override
             public void onError(int code, String message) {
@@ -563,7 +599,7 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
                 WritableArray uuids = Arguments.createArray();
                 for (TTDrawFeedAd ad : ads) {
                     uuid = UUID.randomUUID().toString();
-                    drawAds.put(uuid, ad);
+                    nativeDrawAds.put(uuid, ad);
                     uuids.pushString(uuid);
                 }
                 WritableMap params = Arguments.createMap();
@@ -637,46 +673,24 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         });
     }
 
-
-    @Override
-    public void onHostDestroy() {
-    }
-
-    @Override
-    public void onHostPause() {
-    }
-
-    /**
-     * 在这里 触发插屏广告的 onVideoClose 事件
-     */
-    @Override
-    public void onHostResume() {
-        if (lastActiveInteraction == null) {
-            return;
-        }
-        if (isConfigInterTrue(lastActiveInteraction, "onVideoClose")) {
-            sendAdEvent(lastActiveInteraction, "onVideoClose");
-        }
-        mttInteractionConfigs.remove(lastActiveInteraction);
-        lastActiveInteraction = null;
-    }
-
     // 插屏广告逻辑不太一样, 为了更好的用户体验, render 完成后再发送 onVideoLoad
     private void initTTadInter(final String hash, final TTNativeExpressAd ad) {
         ad.setExpressInteractionListener(new TTNativeExpressAd.AdInteractionListener() {
             @Override
             public void onAdShow(View view, int type) {
-                // 为防止 InteractionType 有变动, 这里再传递一次
-                if (isConfigInterTrue(hash, "onVideoShow")) {
-                    sendAdEvent(hash, "onVideoShow", type, null);
+                // 仅触发一次, 且为了防止 InteractionType 有变动, 在 onShow 时也传递一下 type
+                lastClickInteraction = null;
+                if (lastInteractionDismiss) {
+                    lastInteractionDismiss = false;
+                    if (isConfigInterTrue(hash, "onVideoShow")) {
+                        sendAdEvent(hash, "onVideoShow", type, null);
+                    }
                 }
             }
 
             @Override
             public void onAdClicked(View view, int type) {
-                // 点击了插屏广告, 当前 activity 会处于 blur 状态, 当再次 focus 则认为是关闭了广告页
-                // 这里打点 一个 lastActiveInteraction 值, 便于在 onWindowFocusChange 做判断
-                lastActiveInteraction = hash;
+                lastClickInteraction = hash;
                 if (isConfigInterTrue(hash, "onVideoClick")) {
                     sendAdEvent(hash, "onVideoClick");
                 }
@@ -684,6 +698,13 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
 
             @Override
             public void onAdDismiss() {
+                if (!lastInteractionDismiss) {
+                    lastInteractionDismiss = true;
+                }
+                // 由 AdClicked 引起的 插屏关闭, 不触发 skip 事件
+                if (lastActiveInteraction != null) {
+                    return;
+                }
                 // 这里是关闭了 插屏广告, 触发 onVideoSkipped, 即跳过了广告
                 if (isConfigInterTrue(hash, "onVideoSkip")) {
                     sendAdEvent(hash, "onVideoSkip");
@@ -704,6 +725,41 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
             }
         });
         ad.render();
+    }
+
+    @Override
+    public void onHostDestroy() {
+    }
+
+    @Override
+    public void onHostPause() {
+        // 当前 activity 触发 onHostPause, 判断是否由于点击插屏引起的
+        if (lastClickInteraction != null) {
+            lastActiveInteraction = lastClickInteraction;
+            lastClickInteraction = null;
+        }
+    }
+
+    /**
+     * 在这里 触发插屏广告的 onVideoClose 事件
+     */
+    @Override
+    public void onHostResume() {
+        // 当前 activity 触发 onHostResume, 检查是否为 关闭插屏广告页 触发的
+        if (lastActiveInteraction == null) {
+            return;
+        }
+        // 关闭了插屏广告页, 但 插屏 并未关闭, 也不做处理
+        if (!lastInteractionDismiss) {
+            lastActiveInteraction = null;
+            return;
+        }
+        // 关闭 插屏广告页, 且 插屏也已关闭, 触发videoClose
+        if (isConfigInterTrue(lastActiveInteraction, "onVideoClose")) {
+            sendAdEvent(lastActiveInteraction, "onVideoClose");
+        }
+        mttInteractionConfigs.remove(lastActiveInteraction);
+        lastActiveInteraction = null;
     }
 
     // 下载监听器, 如果点开广告后 点击下载, 然后关了广告, 那么下载事件就停了, 应该是进程退出了

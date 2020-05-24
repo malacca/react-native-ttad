@@ -119,7 +119,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
             } else {
                 requestAd();
             }
-        } else if (reloadSize && adType != TTadType.SPLASH && adType != TTadType.DRAW) {
+        } else if (reloadSize && adType != TTadType.SPLASH && adType != TTadType.DRAW_NATIVE) {
             // 仅 size 变动, express 类型需重新请求, ad size 不会自适应变动
             // 同样的, 这里仅重置状态值
             adLoaded = false;
@@ -189,7 +189,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
     // 视频类型广告 是否可以暂停播放 (实测, 一旦广告渲染完成, 再修改该参数无效)
     protected void setCanInterrupt(boolean canInterrupt) {
         canInterruptVideo = canInterrupt;
-        if (adType == TTadType.DRAW) {
+        if (adType == TTadType.DRAW_NATIVE) {
             if (drawView != null) {
                 drawView.setCanInterruptVideoPlay(canInterrupt);
             }
@@ -198,7 +198,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
         }
     }
 
-    // draw 类型 onLoad 回调是否需要 logo image 的 base64 数据
+    // draw_native 类型 onLoad 回调是否需要 logo image 的 base64 数据
     protected void setNeedAdLogo(boolean needAdLogo) {
         drawAdNeedLogo = needAdLogo;
     }
@@ -233,10 +233,10 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
 
         // 使用 uuid 预加载的广告, 只有在 uuid 发生变化才重新加载, 其他情况(如尺寸/其他props)的变动直接忽略
         if (!TextUtils.isEmpty(uuid)) {
-            if (adType == TTadType.DRAW) {
-                renderDrawCache(uuid);
+            if (adType == TTadType.DRAW_NATIVE) {
+                renderNativeDrawCache(uuid);
             } else {
-                renderExpressCache(uuid);
+                renderExpressCache(uuid, adType == TTadType.DRAW);
             }
             return;
         }
@@ -260,8 +260,8 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
                     .setAdCount(1);
             if (adType == TTadType.SPLASH) {
                 loadSplashAd(mTTAdNative, builder);
-            } else if (adType == TTadType.DRAW) {
-                loadDrawAd(mTTAdNative, builder);
+            } else if (adType == TTadType.DRAW_NATIVE) {
+                loadNativeDrawAd(mTTAdNative, builder);
             } else {
                 loadExpressAd(mTTAdNative, builder);
             }
@@ -300,14 +300,13 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
                 removeAllViews();
                 addView(ttSplashAd.getSplashView());
             }
-        }, timeout < 1500 ? 1500 : timeout);
+        }, Math.max(timeout, 1500));
     }
 
     /**
-     * draw 类型视频广告
-     * (虽然 sdk 中 ExpressAd 也有 draw, 但这种类型的好像下线了, 新建的广告位都不支持了)
+     * draw 类型视频广告 自渲染模式
      */
-    private void loadDrawAd(TTAdNative mTTAdNative, AdSlot.Builder builder) {
+    private void loadNativeDrawAd(TTAdNative mTTAdNative, AdSlot.Builder builder) {
         builder.setImageAcceptedSize(adWidth, adHeight);
         mTTAdNative.loadDrawFeedAd(builder.build(), new TTAdNative.DrawFeedAdListener() {
             @Override
@@ -320,24 +319,24 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
                 if (ads == null || ads.size() == 0) {
                     sendAdEvent("onFail", -105, "expressAd response empty");
                 } else {
-                    renderDrawAd(ads.get(0), false);
+                    renderNativeDrawAd(ads.get(0), false);
                 }
             }
         });
     }
 
-    // 使用预加载的 Draw 广告
-    private void renderDrawCache(String uuid) {
-        TTDrawFeedAd ad = TTadModule.getDrawPreAd(uuid);
+    // 使用预加载的 native Draw 广告
+    private void renderNativeDrawCache(String uuid) {
+        TTDrawFeedAd ad = TTadModule.getNativeDrawPreAd(uuid);
         if (ad == null) {
             sendAdEvent("onFail", -105, "drawAd cache empty");
         } else {
-            renderDrawAd(ad, true);
+            renderNativeDrawAd(ad, true);
         }
     }
 
     // 渲染 draw 视频广告, 该类型广告播放两遍, 会显示 按钮, 但点击按钮无法监听, 仅能监听自定义元素的点击事件
-    private void renderDrawAd(TTDrawFeedAd ad, boolean preload) {
+    private void renderNativeDrawAd(TTDrawFeedAd ad, final boolean preload) {
         removeAllViews();
 
         // 添加一个 onAdCreativeClick 的触发 view
@@ -350,7 +349,11 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
         ad.registerViewForInteraction(TTadView.this, drawClickView, new TTNativeAd.AdInteractionListener() {
             @Override
             public void onAdShow(TTNativeAd ad) {
-                onDrawAdLoaded(drawView);
+                onNativeDrawAdLoaded(drawView);
+                // 新版 sdk 渲染预加载的 必须要 requestLayout 才能撑开尺寸
+                if (preload) {
+                    requestLayout();
+                }
             }
 
             @Override
@@ -369,7 +372,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
     }
 
     // 通知 js draw 广告就绪
-    private void onDrawAdLoaded(TTDrawFeedAd ad) {
+    private void onNativeDrawAdLoaded(TTDrawFeedAd ad) {
         WritableMap map = Arguments.createMap();
         map.putString("event", "onLoad");
         map.putInt("imageMode", ad.getImageMode());
@@ -419,7 +422,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
     }
 
     // 触发创意区 click 事件
-    protected void clickDrawAd() {
+    protected void clickNativeDrawAd() {
         if (drawClickView != null) {
             drawClickView.performClick();
         }
@@ -449,16 +452,18 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
         };
         if (adType == TTadType.BANNER) {
             mTTAdNative.loadBannerExpressAd(builder.build(), listener);
-        } else if (adType == TTadType.FEED) {
-            mTTAdNative.loadNativeExpressAd(builder.build(), listener);
-        } else {
+        } else if (adType == TTadType.INTERACTION) {
             mTTAdNative.loadInteractionExpressAd(builder.build(), listener);
+        } else if (adType == TTadType.DRAW) {
+            mTTAdNative.loadExpressDrawFeedAd(builder.build(), listener);
+        } else {
+            mTTAdNative.loadNativeExpressAd(builder.build(), listener);
         }
     }
 
     // 使用预加载的 ExpressAd 广告
-    private void renderExpressCache(String uuid) {
-        TTNativeExpressAd ad = TTadModule.getFeedPreAd(uuid);
+    private void renderExpressCache(String uuid, boolean isDraw) {
+        TTNativeExpressAd ad = isDraw ? TTadModule.getDrawPreAd(uuid) : TTadModule.getFeedPreAd(uuid);
         if (ad == null) {
             sendAdEvent("onFail", -105, "expressAd cache empty");
         } else {
@@ -470,6 +475,8 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
     private void renderExpressAd(TTNativeExpressAd ad) {
         destroyAdView();
         adView = ad;
+        bindDislikeListener();
+        bindAdViewListener();
         ad.setExpressInteractionListener(new TTNativeExpressAd.ExpressAdInteractionListener() {
             @Override
             public void onAdShow(View view, int type) {
@@ -492,6 +499,8 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
 
             @Override
             public void onRenderSuccess(View view, float width, float height) {
+                // todo: 待校验, 测试发现预加载的 draw 视频, 有不小的概率 width=height=0
+                // todo: 导致视频不显示
                 insertAdView(view, width, height);
             }
         });
@@ -499,13 +508,11 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
         if (intervalTime != 0) {
             ad.setSlideIntervalTime(intervalTime);
         }
-        bindDislikeListener();
-        bindAdViewListener();
         ad.render();
     }
 
     // 设置广告 view 视图尺寸
-    private void insertAdView(final View view, float width, float height) {
+    private void insertAdView(final View view, final float width, final float height) {
         removeAllViews();
         addView(view);
 
@@ -561,7 +568,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
             case SPLASH:
                 bindSplashListener();
                 break;
-            case DRAW:
+            case DRAW_NATIVE:
                 bindDrawVideoListener();
                 break;
             default:
@@ -604,7 +611,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
         });
     }
 
-    // draw 视频类型广告监听
+    // native draw 视频类型广告监听
     private void bindDrawVideoListener() {
         if (drawView == null) {
             return;
@@ -666,7 +673,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
         });
     }
 
-    // Express 视频类型广告监听
+    // Express 视频类型广告监听  这里并不保证所有 video 都会触发
     private void bindExpressVideoListener() {
         if (adView == null) {
             return;
@@ -798,7 +805,6 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
     private boolean hasListener(String event) {
         return listeners != null && listeners.hasKey(event) && listeners.getBoolean(event);
     }
-
 
     private void sendAdEvent(String event) {
         if (hasListener(event)) {

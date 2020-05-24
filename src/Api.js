@@ -208,6 +208,7 @@ class Loader {
     _horizontal = false;
     _deepLink = false;
     _permission = false;
+    _native = false;
     _width = 0;
     _height = 0;
 
@@ -242,6 +243,13 @@ class Loader {
         this._permission = v === undefined ? true : Boolean(v);
         return this
     }
+
+    // 信息流 draw / 激励 / 全屏  是否为自渲染模式
+    isNative(v) {
+        this._native = v;
+        return this;
+    }
+
     // 插屏/Feed信息流 设置广告尺寸
     size(width, height){
         this._width = gint(width);
@@ -286,9 +294,10 @@ class Loader {
             deepLink: this._deepLink,
             permission: this._permission
         }
-        // draw feed 类型
+        // draw 类型
         if (this._type > 3) {
             config.count = this._count;
+            config.native = this._native;
             TTadModule.loadDraw(config);
             return this;
         }
@@ -317,9 +326,11 @@ class Loader {
             config.extra = this._extra;
             config.rewardName = this._rewardName;
             config.rewardAmount = this._rewardAmount;
+            config.native = this._native;
             TTadModule.loadRewardVideo(config);
         } else {
             // 全屏视频
+            config.native = this._native;
             TTadModule.loadFullVideo(config);
         }
         return this._player;

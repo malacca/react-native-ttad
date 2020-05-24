@@ -27,7 +27,8 @@ public class TTadPackage implements ReactPackage {
                 new TTFeedView(),
                 new TTInteractionView(),
                 new TTSplashView(),
-                new TTDrawView()
+                new TTDrawView(),
+                new TTDrawNativeView()
         );
     }
 }

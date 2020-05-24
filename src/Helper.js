@@ -1,10 +1,4 @@
 
-import {
-  requireNativeComponent, 
-  findNodeHandle, 
-  UIManager
-} from 'react-native';
-
 const bindBasic = [
   '_onLoad',  // 加载成功
   '_onFail',  // 加载失败 或 其他错误
@@ -74,28 +68,28 @@ const getEvent = (obj, type, disableCard) => {
     event._bindDownload = true;
   }
 
-  const isDraw = type === 'draw';
-  const isSplash = !isDraw && type === 'splash';
+  const isNativeDraw = type === 'draw_native';
+  const isSplash = !isNativeDraw && type === 'splash';
 
-  // draw splash 类型 click 事件为动态绑定
-  const listenClick = isDraw || isSplash ? bindClick.some(e => e in event) : false;
+  // nativeDraw splash 类型 click 事件为动态绑定
+  const listenClick = isNativeDraw || isSplash ? bindClick.some(e => e in event) : false;
 
   if (!isSplash) {
-    // draw 类型没有使用自定义 card, 必须 bindVideo, 因为默认的 card 需要监听反馈
-    let listenVideo = (isDraw && !disableCard) || bindVideo.some(e => e in event);
+    // nativeDraw 类型使用默认 card, 必须 bindVideo, 因为默认的 card 需要监听反馈
+    let listenVideo = (isNativeDraw && !disableCard) || bindVideo.some(e => e in event);
 
-    // draw 类型的 retry 在 click 事件集上 / express 类型无需动态绑定 click 事件集, 原生端总会通知
-    const retry = isDraw || !listenVideo ? '_onVideoRetry' in event : false;
+    // nativeDraw 类型的 retry 在 click 事件集上 / express 类型无需动态绑定 click 事件集, 原生端总会通知
+    const retry = isNativeDraw || !listenVideo ? '_onVideoRetry' in event : false;
 
-    if (!isDraw) {
+    if (!isNativeDraw) {
       listenVideo = listenVideo || retry;
     } else if (retry || listenClick){
       event._bindClick = true;
     }
     if (listenVideo) {
       event._bindVideo = true;
-      // draw 使用默认 card, 原生端必须触发以下事件
-      if (isDraw && !disableCard) {
+      // nativeDraw 使用默认 card, 原生端必须触发以下事件
+      if (isNativeDraw && !disableCard) {
         event._onVideoPlay = true;
         event._onVideoComplete = true;
       }

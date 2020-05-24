@@ -134,6 +134,10 @@ Player = [fullVideo|rewardVideo|interaction](codeId) // 设置广告ID
     .size(width, height) //插屏专用, 设置广告尺寸 (默认宽度为屏幕80%,高度自动)
                          //可仅设置 width (高度自动), 也可二者都设置
 
+    .isNative(false)    //是否为自渲染广告（支持 fullVideo / rewardVideo），
+                        //默认已无法创建该类型广告了, 新创建的只有模板渲染类型, 
+                        //所以一般无需设置该项     
+
     // 激励视频专用, 奖励配置, 具体请参考官方文档, 还可能牵涉服务端通信
     .userId(String)
     .rewardName(String)
@@ -161,9 +165,10 @@ player
     .onShow(callback) //显示后回调
     .onClick(callback) //点击回调
     .onSkip(callback) //跳过回调 (全屏视频跳过|插屏关闭)
+                      //因为用户点击广告导致的关闭, 而非主动关闭插屏, 不触发
     .onComplete(callback) //视频播放完成后回调
     .onReward(callback) //激励视频,需发放奖励回调
-    .onClose(callback) //广告关闭回调
+    .onClose(callback) //广告关闭回调 , 对于插屏, 只有在插屏关闭 + 弹窗关闭才触发
 
     .onIdle(callback) //下载空闲
     .onDownloadProgress(callback) //下载进度
@@ -248,6 +253,7 @@ TTAdSplash / TTAdDraw 除 width 外，还必须要有 height，也可以是直�
 // draw 信息流
 <TTAdDraw
     canInterrupt={false} 
+    native={false} // 是否为自渲染 draw video, 该类型默认已无法申请
 />
 ```
 
@@ -276,6 +282,8 @@ listeners = {bus => {
     .permission(Bool)  
     .size(width, height)
 
+    .isNative(false)  // loadDraw 是否为预加载自渲染 draw video
+
     .onError(err => {})
     .onLoad(uuids => {
 
@@ -293,5 +301,7 @@ listeners = {bus => {
 
 <TTadFeed || TTAdDraw
     uuid=""  //设置为 预加载得到的 uuid
+    canInterrupt={false} 
+    native={false}
 />
 ```

@@ -12,38 +12,52 @@ import {
 } from 'react-native';
 import {makeProps, reciveEvent} from './Helper';
 
+const RNTTDrawView = requireNativeComponent('RNTTDrawView');
+const RNTTDrawNativeView = requireNativeComponent('RNTTDrawNativeView');
+
 // 穿山甲logo
 let _TTadLogoBase64 = null;
-let _TTadLogoImage = null;
 
 class TTAdDraw extends PureComponent {
-  state = {
-    logo:null,
-    title:null,
-    description:null,
-    buttonText:null,
-    icon: {},
-  };
-  _cardOpacity = null;
-  _cardFadeIn = null;
-  _cardFadeOut = null;
-  _createAnimation = () => {
-    if (this._cardOpacity !== null) {
-      return;
+  constructor(props) {
+    super(props);
+    if (this._isNative = Boolean(this.props.native)) {
+      this._initNative();
     }
-    this._cardOpacity = new Animated.Value(0);
-    this._cardFadeIn = Animated.timing(this._cardOpacity, {
-      toValue:1,
-      duration:2500,
-      useNativeDriver:true,
-      isInteraction:false, 
-    });
-    this._cardFadeOut = Animated.timing(this._cardOpacity, {
-      toValue:0,
-      duration:1500,
-      useNativeDriver:true,
-      isInteraction:false, 
-    });
+  }
+
+
+  // 自渲染 draw
+  //-------------------------------------
+  _initNative = () => {
+    this.state = {
+      logo:null,
+      title:null,
+      description:null,
+      buttonText:null,
+      icon: {},
+    };
+    this._cardOpacity = null;
+    this._cardFadeIn = null;
+    this._cardFadeOut = null;
+    this._createAnimation = () => {
+      if (this._cardOpacity !== null) {
+        return;
+      }
+      this._cardOpacity = new Animated.Value(0);
+      this._cardFadeIn = Animated.timing(this._cardOpacity, {
+        toValue:1,
+        duration:2500,
+        useNativeDriver:true,
+        isInteraction:false, 
+      });
+      this._cardFadeOut = Animated.timing(this._cardOpacity, {
+        toValue:0,
+        duration:1500,
+        useNativeDriver:true,
+        isInteraction:false, 
+      });
+    }
   }
 
   _fadeInOut = (out) => {
@@ -61,7 +75,7 @@ class TTAdDraw extends PureComponent {
     bus && bus[key] && bus[key](message);
   }
 
-  _event = (e) => {
+  _eventNative = (e) => {
     let {event, code, error, logo, ...message} = e.nativeEvent;
     if (event === 'onLoad') {
       if (_TTadLogoBase64) {
@@ -82,7 +96,7 @@ class TTAdDraw extends PureComponent {
     // 处理默认 card
     if (event === 'onLoad') {
       const {logo, title, description, buttonText, icon} = message;
-      this.setState({logo, title, description, buttonText, icon}) 
+      this.setState({logo, title, description, buttonText, icon})
     } else if (event === 'onVideoPlay') {
       this._fadeInOut();
     } else if (event === 'onVideoComplete') {
@@ -95,30 +109,82 @@ class TTAdDraw extends PureComponent {
     if (this.state.title === null) {
       return null;
     }
-    const {url, width, height} = this.state.icon||{};
+    const {url} = this.state.icon||{};
     const icon = url ? <Image source={{uri:url}} style={styles.icon}/> : null;
-    let logo = null;
-    if (_TTadLogoImage) {
-      logo = _TTadLogoImage;
-    } else if (this.state.logo) {
-      logo = _TTadLogoImage = <Image source={{uri:this.state.logo}} style={styles.logo}/>
-    }
+    const logo = <Image source={{uri:this.state.logo}} style={styles.logo}/>
     return <Animated.View style={[styles.card, {opacity: this._cardOpacity}]}>
         <View style={styles.title}>
           {icon}
           <Text style={styles.titleText}>{this.state.title}</Text>
-          <TouchableOpacity style={styles.button} activeOpacity={0.9} onPress={this.open}><Text style={styles.buttonText}>{this.state.buttonText}</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.button} activeOpacity={0.9} onPress={this.open}>
+            <Text style={styles.buttonText}>{this.state.buttonText}</Text>
+          </TouchableOpacity>
         </View>
         <Text style={styles.description}>{logo} {this.state.description}</Text>
     </Animated.View>
   }
 
-  _renderDraw(nativeProps){
+  _renderNativeDrawView(nativeProps){
     // logo 仅请求一次, 缓存起来
     const {needAdLogo, ...props} = nativeProps;
     if (!_TTadLogoBase64) {
       props.needAdLogo = true;
     }
+    return (
+      <RNTTDrawNativeView
+        {...props}
+        ref="ad"
+        onTTadViewEvent={this._eventNative}
+      />
+    );
+  }
+ 
+  _renderNativeDraw() {
+    const {listener, style, ...nativeProps} = this.props;
+    const {disableCard} = nativeProps;
+
+    if (listener) {
+      nativeProps.listener = listener;
+    } else if (!disableCard) {
+      // 使用默认 card, 必须有 listener
+      nativeProps.listener = () => {};
+    }
+
+    const {bus, props} = makeProps(nativeProps, 'draw_native')
+    this._bus = bus;
+
+    // 不使用默认card, 只显示视频
+    if (disableCard) {
+      props.style = style;
+      return this._renderNativeDrawView(props);
+    }
+    this._createAnimation();
+    props.style = StyleSheet.absoluteFill;
+    return <View style={style}>{this._renderNativeDrawView(props)}{this._renderCard()}</View>
+  }
+
+  // 使用 ref.open() 触发 自渲染 draw 广告的点击事件
+  open = () => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(this.refs.ad),
+      "clickDraw", 
+      []
+    );
+  }
+
+
+  // 模板渲染的 draw
+  //-------------------------------------
+  _event = (e) => {
+    reciveEvent(this.refs.ad, this._bus, e);
+  }
+
+  render(){
+    if (this._isNative) {
+      return this._renderNativeDraw();
+    }
+    const {bus, props} = makeProps(this.props, 'draw');
+    this._bus = bus;
     return (
       <RNTTDrawView
         {...props}
@@ -127,41 +193,9 @@ class TTAdDraw extends PureComponent {
       />
     );
   }
-
-  render(){
-    const {listener, ...nativeProps} = this.props;
-    const {disableCard} = nativeProps;
-    if (listener) {
-      nativeProps.listener = listener;
-    } else if (!disableCard) {
-      // 使用默认 card, 必须有 listener
-      nativeProps.listener = () => {};
-    }
-    const {bus, props} = makeProps(nativeProps, 'draw')
-    this._bus = bus;
-    if (disableCard) {
-      return this._renderDraw(props);
-    }
-    this._createAnimation();
-    return <View style={styles.draw}>{this._renderDraw(props)}{this._renderCard()}</View>
-  }
-
-  // 调用时, 可使用 ref.open() 触发点击事件
-  open = () => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(this.refs.ad),
-      "clickDraw", 
-      []
-    );
-  }
 }
-const RNTTDrawView = requireNativeComponent('RNTTDrawView', TTAdDraw);
 
 const styles = StyleSheet.create({
-  draw:{
-    position:'relative',
-    alignSelf:'flex-start',
-  },
   card: {
     position:"absolute",
     left:6,
