@@ -7,6 +7,10 @@ const gint = (v) => {
     v = parseInt(v);
     return typeof v === "number" && isFinite(v) && Math.floor(v) === v ? v : 0;
 };
+
+/**
+ * 显示加载好的 全屏/激励/插屏 广告
+ */
 class Player {
     _canplay = false;
     _showed = false;
@@ -201,6 +205,12 @@ class Player {
         }
     }
 }
+
+
+/**
+ * 用于加载 全屏/激励/插屏 广告
+ * 也用来 预加载 feed/draw 广告
+ */
 class Loader {
     _hash = null;
     _type = 0;
@@ -244,18 +254,21 @@ class Loader {
         return this
     }
 
-    // 信息流 draw / 激励 / 全屏  是否为自渲染模式
-    isNative(v) {
-        this._native = v;
-        return this;
-    }
-
-    // 插屏/Feed信息流 设置广告尺寸
+    // 尺寸, 可缺省, 
+    // 1. 插屏、信息流、draw 可设置宽度(高度自适应), 也可以宽高都设置
+    // 2. 全屏/激励视频也可以设置, 但没什么实际作用
     size(width, height){
         this._width = gint(width);
         this._height = gint(height);
         return this;
     }
+
+    // 全屏 / 激励 / draw  是否为自渲染模式, 该类型默认已无法申请
+    isNative(v) {
+        this._native = v;
+        return this;
+    }
+
     // 激励视频 设置激励参数
     userId(v){
         this._userId = v;
@@ -292,7 +305,9 @@ class Loader {
             codeId: this._codeId,
             horizontal: this._horizontal,
             deepLink: this._deepLink,
-            permission: this._permission
+            permission: this._permission,
+            width: this._width,
+            height: this._height
         }
         // draw 类型
         if (this._type > 3) {
@@ -304,8 +319,6 @@ class Loader {
         // feed 类型
         if (this._type > 2) {
             config.count = this._count;
-            config.width = this._width;
-            config.height = this._height;
             TTadModule.loadFeed(config);
             return this;
         }
@@ -317,8 +330,6 @@ class Loader {
         this._player = new Player(this._hash, this._type);
         if (this._type > 1) {
             // 插屏
-            config.width = this._width;
-            config.height = this._height;
             TTadModule.loadInteraction(config);
         } else if (this._type > 0) {
             // 激励视频

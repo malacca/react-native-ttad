@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Button, View, Text } from 'react-native';
+import {StyleSheet, Button, View, Text} from 'react-native';
 import TTad, {
   TTadBanner, 
   TTadFeed, 
@@ -30,7 +30,6 @@ const config = {
   // 插屏
   interactionId:"",
 }
-
 
 TTad.initSdk({
   appId:config.appId,
@@ -103,7 +102,6 @@ class TTadTest extends React.Component {
     }
     console.log(codeId, native);
     repload(codeId, 1)
-    .size(1080, 400)
     .isNative(native)
     .onError(e => {
       console.log('_____preload_error', e)
@@ -116,7 +114,6 @@ class TTadTest extends React.Component {
           uuid: uuids[0]
         })
       }
-
     }).load()
   }
 
@@ -186,7 +183,7 @@ class TTadTest extends React.Component {
     if (this.state.adType === 'drawNative') {
       return <TTAdDraw
         style={styles.draw}
-        codeId={config.drawId}
+        codeId={config.drawNativeId}
         listener={this.listener}
         canInterrupt={true}
         native={true}
@@ -212,8 +209,8 @@ class TTadTest extends React.Component {
     const realType = type + (native ? 'Native' : '');
     const codeId = config[realType + 'Id'];
     console.log('____startLoad', realType, codeId)
-
-    load(codeId).isNative(native)
+    load(codeId)
+    .isNative(native)
     .onLoad(player => {
       console.log('___onLoad', player)
       if(type === 'interaction') {
@@ -244,8 +241,6 @@ class TTadTest extends React.Component {
       console.log('___showad_onClose', e)
     }).show();
   }
-
-
 
   render() {
     if (this.state.adType !== null) {
@@ -302,14 +297,10 @@ const styles = StyleSheet.create({
     alignSelf:"stretch",
   },
   draw:{
-    // width:300,
-    // height:300,
     flex:1,
     alignSelf:"stretch",
-    backgroundColor:"green"
   }
 });
-
 
 
 export default TTadTest;

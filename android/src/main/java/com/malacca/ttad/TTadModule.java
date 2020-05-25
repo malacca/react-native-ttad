@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.HashMap;
 
-import android.util.Log;
 import android.view.View;
 import android.app.Activity;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
+import android.content.res.Resources;
 import android.content.pm.ApplicationInfo;
 
 import androidx.annotation.NonNull;
@@ -57,6 +57,7 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         TTAdConstant.RitScenes.GAME_GIFT_BONUS,
         TTAdConstant.RitScenes.CUSTOMIZE_SCENES,
     };
+    private static DisplayMetrics displayMetrics = Resources.getSystem().getDisplayMetrics();
 
     private static HashMap<String, TTNativeExpressAd> feedAds = new HashMap<>();
     private static HashMap<String, TTNativeExpressAd> drawAds = new HashMap<>();
@@ -174,8 +175,8 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
      *     codeId:String,  广告id
      *     deepLink: bool, 是否支持 deepLink, 默认 true
      *     permission:bool, 是否请求必要的权限, 建议在载入广告前就先请求好权限
-     *     width: int, 请求宽度 必须制定
-     *     height: int, 请求高度 可不指定, 会自动根据在广告管理后台的比例加载
+     *     width: float, 请求宽度 不指定则使用屏幕宽度
+     *     height: float, 请求高度 可不指定, 会自动根据在广告管理后台的比例加载
      *     count: int, 预加载条数
      * }
      */
@@ -401,8 +402,8 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
      *     codeId:String,  广告id
      *     deepLink: bool, 是否支持 deepLink, 默认 true
      *     permission:bool, 是否请求必要的权限, 建议在载入广告前就先请求好权限
-     *     width: int, 请求宽度 默认为屏幕宽度的 4/5
-     *     height: int, 请求高度 高度可不指定, 会自动根据在广告管理后台的比例加载
+     *     width: float, 请求宽度 默认为屏幕宽度的 4/5
+     *     height: float, 请求高度 高度可不指定, 会自动根据在广告管理后台的比例加载
      * }
      */
     @ReactMethod
@@ -465,11 +466,6 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
             sendAdEvent(hash, "onVideoError", -101, "TTad codeId not defined");
             return;
         }
-        int width = config.hasKey("width") ? config.getInt("width") : 0;
-        if (width == 0 && type == TTadType.FEED) {
-            sendAdEvent(hash, "onVideoError", -102, "TTad width not defined");
-            return;
-        }
 
         final Activity mainActivity = getCurrentActivity();
 
@@ -488,15 +484,29 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         //step3: 创建TTAdNative对象,用于调用广告请求接口
         TTAdNative mTTAdNative = ttAdManager.createAdNative(mainActivity);
 
+        // 广告尺寸处理
+        int width, height;
+        int adWidth = config.hasKey("width") ? config.getInt("width") : 0;
+        int adHeight = config.hasKey("height") ? config.getInt("height") : 0;
+
+        // 未指尺寸, 使用屏幕宽度, 插屏使用屏幕宽度的 4/5
+        if (adWidth == 0) {
+            width = type == TTadType.INTERACTION ? displayMetrics.widthPixels * 4 / 5 : displayMetrics.widthPixels;
+            adWidth = (int) (width / displayMetrics.density);
+        } else {
+            width = (int) (adWidth * displayMetrics.density);
+        }
+
+        // adHeight 可以为0, 但 height 必须指定, 虽然不起作用
+        height = adHeight == 0 ? (type == TTadType.INTERACTION ? width / 3 * 2 : displayMetrics.heightPixels)
+                : (int) (adHeight * displayMetrics.density);
+
         //step4: 请求广告
-        int height = config.hasKey("height") ? config.getInt("height") : 0;
         AdSlot.Builder builder = new AdSlot.Builder()
                 .setCodeId(codeId)
                 .setSupportDeepLink(isConfigTrue(config, "deepLink"))
-                .setImageAcceptedSize(
-                        width == 0 ? 1080 : width,
-                        height == 0 ? 1920 : height
-                ) // 实测发现 要求设置该项, 但都没起作用, 也许是测试模式下不准确, 这里仍然暴露接口, 但给一个默认值
+                // 实测发现 要求设置该项, 但都没起作用, 也许是测试模式下不准确, 这里仍然暴露接口, 但给一个默认值
+                .setImageAcceptedSize(width, height)
                 .setOrientation(
                         isConfigTrue(config, "horizontal")
                                 ? TTAdConstant.HORIZONTAL
@@ -509,7 +519,7 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         try {
             switch (type) {
                 case FEED:
-                    builder.setExpressViewAcceptedSize(width, height);
+                    builder.setExpressViewAcceptedSize(adWidth, adHeight);
                     loadTTadFeed(mTTAdNative, builder, hash, false);
                     break;
                 case DRAW:
@@ -517,30 +527,26 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
                     if (config.hasKey("native") && config.getBoolean("native")) {
                         loadTTadNativeDraw(mTTAdNative, builder, hash);
                     } else {
+                        builder.setExpressViewAcceptedSize(adWidth, adHeight);
                         loadTTadFeed(mTTAdNative, builder, hash, true);
                     }
                     break;
                 case FULL:
                     // 当前只有模板渲染了, 所以默认设置为模板渲染, 但指定为 native 仍可使用自渲染
                     if (!config.hasKey("native") || !config.getBoolean("native")) {
-                        builder.setExpressViewAcceptedSize(500,500);
+                        builder.setExpressViewAcceptedSize(adWidth, adHeight);
                     }
                     loadTTadFull(mTTAdNative, builder, hash);
                     break;
                 case REWARD:
                     // 同上
                     if (!config.hasKey("native") || !config.getBoolean("native")) {
-                        builder.setExpressViewAcceptedSize(500,500);
+                        builder.setExpressViewAcceptedSize(adWidth, adHeight);
                     }
                     loadTTadReward(mTTAdNative, builder, hash, config);
                     break;
                 case INTERACTION:
-                    if (width == 0) {
-                        DisplayMetrics metrics = new DisplayMetrics();
-                        mainActivity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-                        width = (int) (metrics.widthPixels / metrics.density) * 4 / 5;
-                    }
-                    builder.setExpressViewAcceptedSize(width, height);
+                    builder.setExpressViewAcceptedSize(adWidth, adHeight);
                     loadTTadInter(mTTAdNative, builder, hash);
                     break;
             }
@@ -550,7 +556,7 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         }
     }
 
-    // 预加载 feed draw 信息流广告
+    // 加载 feed draw 信息流广告
     private void loadTTadFeed(TTAdNative mTTAdNative, AdSlot.Builder builder, final String hash, final boolean isDraw) {
         TTAdNative.NativeExpressAdListener listener = new TTAdNative.NativeExpressAdListener() {
             @Override
@@ -585,7 +591,7 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         }
     }
 
-    // 预加载 native draw video
+    // 加载 native draw video
     private void loadTTadNativeDraw(TTAdNative mTTAdNative, AdSlot.Builder builder, final String hash) {
         mTTAdNative.loadDrawFeedAd(builder.build(), new TTAdNative.DrawFeedAdListener() {
             @Override

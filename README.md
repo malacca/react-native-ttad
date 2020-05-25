@@ -131,12 +131,11 @@ Player = [fullVideo|rewardVideo|interaction](codeId) // 设置广告ID
     .deepLink(Bool)   //是否允许 deepLink, 默认 false
     .permission(Bool)  //是否自动索要权限, 默认 false, 不建议自动, 而是在加载广告前更友好的询问
 
-    .size(width, height) //插屏专用, 设置广告尺寸 (默认宽度为屏幕80%,高度自动)
-                         //可仅设置 width (高度自动), 也可二者都设置
+    .size(width, height) //设置广告尺寸 可仅设置 width (高度自动), 也可二者都设置
+                         //一般只用于插屏, 全屏/激励适配虽可以设置, 但没什么作用
 
     .isNative(false)    //是否为自渲染广告（支持 fullVideo / rewardVideo），
-                        //默认已无法创建该类型广告了, 新创建的只有模板渲染类型, 
-                        //所以一般无需设置该项     
+                        //默认已无法创建该类型广告了, 新创建的只有模板渲染类型  
 
     // 激励视频专用, 奖励配置, 具体请参考官方文档, 还可能牵涉服务端通信
     .userId(String)
@@ -280,9 +279,9 @@ listeners = {bus => {
     .horizontal(Bool) 
     .deepLink(Bool)   
     .permission(Bool)  
-    .size(width, height)
 
-    .isNative(false)  // loadDraw 是否为预加载自渲染 draw video
+    .size(width, height) // 广告尺寸, 建议设置
+    .isNative(false)    // loadDraw 是否为预加载自渲染 draw video
 
     .onError(err => {})
     .onLoad(uuids => {

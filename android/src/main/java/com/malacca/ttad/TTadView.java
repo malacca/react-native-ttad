@@ -49,7 +49,6 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
     private boolean canInterruptVideo = false;
     private ReadableMap listeners = null;
 
-    private float density;
     private int adWidth = 0;
     private int adHeight = 0;
     private int adStatus = 0;
@@ -73,7 +72,6 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
         adType = type;
         rnContext = context;
         mEventEmitter = context.getJSModule(RCTEventEmitter.class);
-        density = context.getResources().getDisplayMetrics().density;
         context.addLifecycleEventListener(this);
     }
 
@@ -432,9 +430,7 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
      * ExpressAd 类型广告
      */
     private void loadExpressAd(TTAdNative mTTAdNative, AdSlot.Builder builder) {
-        float width = Math.round(adWidth / density);
-        float height = adHeight == 0 ? 0 : Math.round(adHeight / density);
-        builder.setExpressViewAcceptedSize(width, height).setImageAcceptedSize(600, 600);
+        builder.setExpressViewAcceptedSize(adWidth, adHeight).setImageAcceptedSize(600, 600);
         TTAdNative.NativeExpressAdListener listener = new TTAdNative.NativeExpressAdListener() {
             @Override
             public void onError(int code, String message) {
@@ -499,8 +495,6 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
 
             @Override
             public void onRenderSuccess(View view, float width, float height) {
-                // todo: 待校验, 测试发现预加载的 draw 视频, 有不小的概率 width=height=0
-                // todo: 导致视频不显示
                 insertAdView(view, width, height);
             }
         });
