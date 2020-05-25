@@ -219,7 +219,7 @@ TTAdSplash / TTAdDraw 除 width 外，还必须要有 height，也可以是直�
 <Componet
     codeId=""   //广告ID
     deepLink={false} //是否支持 deepLink
-    listeners={callback} //相关回调
+    listener={callback} //相关回调
 />
 
 // Banner
@@ -261,7 +261,7 @@ TTAdSplash / TTAdDraw 除 width 外，还必须要有 height，也可以是直�
 具体可参见： [Helper.js](src/Helper.js)
 
 ```
-listeners = {bus => {
+listener = {bus => {
     bus
     .onLoad()
     .onFail()
