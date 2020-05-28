@@ -430,7 +430,10 @@ class TTadView extends FrameLayout implements LifecycleEventListener {
      * ExpressAd 类型广告
      */
     private void loadExpressAd(TTAdNative mTTAdNative, AdSlot.Builder builder) {
-        builder.setExpressViewAcceptedSize(adWidth, adHeight).setImageAcceptedSize(600, 600);
+        builder.setExpressViewAcceptedSize(
+                TTadModule.toDIPFromPixel(adWidth),
+                TTadModule.toDIPFromPixel(adHeight)
+        ).setImageAcceptedSize(600, 600);
         TTAdNative.NativeExpressAdListener listener = new TTAdNative.NativeExpressAdListener() {
             @Override
             public void onError(int code, String message) {

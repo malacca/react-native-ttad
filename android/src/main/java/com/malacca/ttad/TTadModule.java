@@ -57,8 +57,6 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         TTAdConstant.RitScenes.GAME_GIFT_BONUS,
         TTAdConstant.RitScenes.CUSTOMIZE_SCENES,
     };
-    private static DisplayMetrics displayMetrics = Resources.getSystem().getDisplayMetrics();
-
     private static HashMap<String, TTNativeExpressAd> feedAds = new HashMap<>();
     private static HashMap<String, TTNativeExpressAd> drawAds = new HashMap<>();
     private static HashMap<String, TTDrawFeedAd> nativeDrawAds = new HashMap<>();
@@ -75,6 +73,12 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
     private HashMap<String,TTNativeExpressAd> mttInteractionAds = new HashMap<>();
 
     private DeviceEventManagerModule.RCTDeviceEventEmitter mJSModule = null;
+
+    // pix -> dip
+    private static DisplayMetrics displayMetrics = Resources.getSystem().getDisplayMetrics();
+    static int toDIPFromPixel(float value) {
+        return (int) (value / displayMetrics.density);
+    }
 
     // 请求广告的接口类
     static @Nullable TTAdManager get() {
@@ -492,7 +496,7 @@ class TTadModule extends ReactContextBaseJavaModule implements LifecycleEventLis
         // 未指尺寸, 使用屏幕宽度, 插屏使用屏幕宽度的 4/5
         if (adWidth == 0) {
             width = type == TTadType.INTERACTION ? displayMetrics.widthPixels * 4 / 5 : displayMetrics.widthPixels;
-            adWidth = (int) (width / displayMetrics.density);
+            adWidth = toDIPFromPixel(width);
         } else {
             width = (int) (adWidth * displayMetrics.density);
         }
